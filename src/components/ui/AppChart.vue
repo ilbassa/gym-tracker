@@ -1,0 +1,12 @@
+<script setup lang="ts">
+import { computed } from 'vue'
+import type { ChartPoint } from '@/services/statistics'
+const props=withDefaults(defineProps<{title:string;points:ChartPoint[];kind?:'bar'|'line';suffix?:string}>(),{kind:'bar',suffix:''})
+const shown=computed(()=>props.points.slice(-12)),max=computed(()=>Math.max(1,...shown.value.map(p=>p.value)))
+const bars=computed(()=>shown.value.map((p,i)=>({x:10+i*(280/Math.max(1,shown.value.length)),width:Math.max(8,260/Math.max(1,shown.value.length)),y:90-(p.value/max.value)*78,height:(p.value/max.value)*78})))
+const polyline=computed(()=>shown.value.map((p,i)=>`${10+i*(280/Math.max(1,shown.value.length-1))},${90-(p.value/max.value)*78}`).join(' '))
+const short=(date:string)=>/^\d{4}-\d{2}-\d{2}$/.test(date)?`${date.slice(8)}/${date.slice(5,7)}`:date
+const formatted=(value:number)=>new Intl.NumberFormat('it-IT',{maximumFractionDigits:2}).format(value)
+</script>
+<template><figure class="chart"><figcaption>{{title}}</figcaption><div class="chart__plot"><svg viewBox="0 0 300 100" role="img" :aria-label="title"><line x1="8" y1="90" x2="296" y2="90" class="axis"/><template v-if="kind==='bar'"><rect v-for="(bar,i) in bars" :key="i" :x="bar.x" :y="bar.y" :width="bar.width" :height="bar.height" rx="3" class="bar"/></template><template v-else><polyline v-if="shown.length>1" :points="polyline" class="line"/><circle v-for="(point,i) in shown" :key="i" :cx="10+i*(280/Math.max(1,shown.length-1))" :cy="90-(point.value/max)*78" r="4" class="dot"/></template></svg></div><ul class="chart__values"><li v-for="point in shown" :key="point.label"><span>{{short(point.label)}}</span><strong>{{formatted(point.value)}}{{suffix}}</strong></li></ul></figure></template>
+<style scoped>.chart{margin:0}.chart figcaption{font-weight:800}.chart__plot{margin-top:var(--space-3);color:var(--color-primary)}svg{display:block;width:100%;height:auto;overflow:visible}.axis{stroke:var(--color-border);stroke-width:1}.bar,.dot{fill:currentColor}.line{fill:none;stroke:currentColor;stroke-width:3;stroke-linejoin:round;stroke-linecap:round}.chart__values{display:flex;gap:var(--space-2);margin:var(--space-3) 0 0;padding:0;overflow-x:auto;list-style:none}.chart__values li{min-width:58px;display:grid;gap:2px;text-align:center;font-size:var(--text-xs)}.chart__values span{color:var(--color-text-muted)}.chart__values strong{font-variant-numeric:tabular-nums}</style>

@@ -1,0 +1,6 @@
+<script setup lang="ts">
+defineProps<{ modelValue: string; label: string; options: Array<{ value: string; label: string }> }>()
+const emit = defineEmits<{ 'update:modelValue': [value: string] }>()
+</script>
+<template><fieldset class="segmented"><legend class="sr-only">{{ label }}</legend><label v-for="option in options" :key="option.value" class="segmented__option" :class="{ 'segmented__option--active': option.value === modelValue }"><input class="sr-only" type="radio" :name="label" :value="option.value" :checked="option.value === modelValue" @change="emit('update:modelValue', option.value)" /><span>{{ option.label }}</span></label></fieldset></template>
+<style scoped>.segmented { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; margin: 0; padding: 3px; border: 0; border-radius: var(--radius-sm); background: var(--color-surface-subtle); }.segmented__option { min-height: 42px; display: grid; place-items: center; padding: var(--space-2); color: var(--color-text-muted); border-radius: 6px; font-size: var(--text-sm); font-weight: 700; cursor: pointer; }.segmented__option--active { color: var(--color-text); background: var(--color-surface); box-shadow: var(--shadow-card); }</style>
