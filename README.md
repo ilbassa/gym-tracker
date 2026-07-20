@@ -16,6 +16,16 @@ npm run test
 npm run build
 ```
 
+## Pubblicazione su GitHub Pages
+
+Il repository è configurato per pubblicare automaticamente su `https://ilbassa.github.io/gym-tracker/` a ogni push sul branch `main`.
+
+1. Su GitHub apri **Settings → Pages**.
+2. In **Build and deployment → Source** seleziona **GitHub Actions**.
+3. Esegui il push su `main` oppure avvia manualmente **Deploy GitHub Pages** dalla scheda Actions.
+
+La build Pages usa `npm run build:pages`, il base path `/gym-tracker/` e il routing hash per permettere l’apertura diretta delle pagine interne. Lo sviluppo locale continua a usare `npm run dev` sulla root `/`.
+
 ## Funzioni
 
 - Inserimento, modifica ed eliminazione di esercizi pesi e cardio.
@@ -59,6 +69,6 @@ In sviluppo, la pagina **Altro → Esercizi** mostra il comando per aggiungere g
 
 ## Verifica finale
 
-- `npm run test`: 45 test superati in 12 file.
+- `npm run test`: 47 test superati in 13 file.
 - `npm run build`: completata; manifest e service worker generati, 62 asset in precache.
 - `npm audit --omit=dev`: 0 vulnerabilità nelle dipendenze di produzione.
