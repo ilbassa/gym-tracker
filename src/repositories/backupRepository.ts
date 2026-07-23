@@ -15,7 +15,8 @@ export function validateBackup(value:unknown):value is BackupData{
   const validSets=value.weightSets.every(x=>isObject(x)&&typeof x.id==='string'&&typeof x.weightLogId==='string'&&typeof x.weight==='number'&&typeof x.repetitions==='number')
   const validCardio=value.cardioLogs.every(x=>{if(!isObject(x)||typeof x.id!=='string'||typeof x.exerciseId!=='string'||typeof x.minutes!=='number')return false;if(x.mode!==undefined&&x.mode!=='duration'&&x.mode!=='intervals')return false;if(x.mode==='intervals'){if(!isObject(x.interval)||typeof x.interval.workSeconds!=='number'||typeof x.interval.restSeconds!=='number'||typeof x.interval.sets!=='number'||typeof x.interval.restBetweenSetsSeconds!=='number'||!Array.isArray(x.interval.exercises)||!x.interval.exercises.every(name=>typeof name==='string'))return false}return true})
   const s=value.settings
-  return validExercise&&validWeight&&validSets&&validCardio&&(s.theme==='system'||s.theme==='light'||s.theme==='dark')&&(s.defaultWeightMode==='total'||s.defaultWeightMode==='per_side')&&(s.exportFormat==='full'||s.exportFormat==='compact')&&typeof s.showExportDate==='boolean'
+  const validDriveSync=s.googleDriveLastSyncAt===undefined||typeof s.googleDriveLastSyncAt==='string'
+  return validExercise&&validWeight&&validSets&&validCardio&&(s.theme==='system'||s.theme==='light'||s.theme==='dark')&&(s.defaultWeightMode==='total'||s.defaultWeightMode==='per_side')&&(s.exportFormat==='full'||s.exportFormat==='compact')&&typeof s.showExportDate==='boolean'&&validDriveSync
 }
 export function summarizeBackup(data:BackupData):BackupSummary{return{exercises:data.exercises.length,weightLogs:data.weightLogs.length,weightSets:data.weightSets.length,cardioLogs:data.cardioLogs.length}}
 

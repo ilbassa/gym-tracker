@@ -67,6 +67,7 @@ export interface Settings {
   defaultWeightMode: WeightMode
   exportFormat: 'full' | 'compact'
   showExportDate: boolean
+  googleDriveLastSyncAt?: string
 }
 
 export interface SettingsRecord {

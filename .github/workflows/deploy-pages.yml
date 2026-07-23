@@ -35,6 +35,8 @@ jobs:
 
       - name: Build for GitHub Pages
         run: npm run build:pages
+        env:
+          VITE_GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_DRIVE_CLIENT_ID }}
 
       - name: Configure Pages
         uses: actions/configure-pages@v6

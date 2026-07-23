@@ -16,6 +16,18 @@ npm run test
 npm run build
 ```
 
+## Backup manuale su Google Drive
+
+La sincronizzazione Drive usa Google Identity Services e salva un unico backup privato nello spazio `appDataFolder` dell’account scelto.
+
+1. In Google Cloud crea un progetto, abilita **Google Drive API** e configura la schermata consenso OAuth.
+2. Crea un Client ID OAuth di tipo **Applicazione web**.
+3. Aggiungi tra le origini JavaScript autorizzate `http://localhost:5173` e l’origine di produzione, ad esempio `https://ilbassa.github.io`.
+4. Copia `.env.example` in `.env.local` e valorizza `VITE_GOOGLE_CLIENT_ID` per lo sviluppo locale.
+5. Per GitHub Pages crea la variabile Actions `GOOGLE_DRIVE_CLIENT_ID`: il workflow la passa automaticamente alla build.
+
+Il Client ID è pubblico e può essere incluso nella build; non devono invece essere aggiunti segreti OAuth al frontend.
+
 ## Pubblicazione su GitHub Pages
 
 Il repository è configurato per pubblicare automaticamente su `https://ilbassa.github.io/gym-tracker/` a ogni push sul branch `main`.
@@ -37,7 +49,7 @@ La build Pages usa `npm run build:pages`, il base path `/gym-tracker/` e il rout
 - Statistiche generali e per esercizio, con separazione dei carichi totali e per parte.
 - Grafici SVG accessibili con valori disponibili anche in forma testuale.
 - Gestione esercizi attivi e disattivati.
-- Backup e ripristino JSON transazionale, più cancellazione forte dei dati.
+- Backup e ripristino JSON transazionale, sincronizzazione manuale privata su Google Drive e promemoria dopo 30 giorni, più cancellazione forte dei dati.
 - Tema chiaro, scuro o di sistema e impostazioni persistenti.
 - PWA installabile, utilizzo offline e applicazione manuale degli aggiornamenti.
 

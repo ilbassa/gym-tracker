@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { Bike, Dumbbell, Share2 } from 'lucide-vue-next'
+import { Bike, CloudUpload, Dumbbell, Share2 } from 'lucide-vue-next'
 import CardioLogCard from '@/components/CardioLogCard.vue'
 import WorkoutShareModal from '@/components/WorkoutShareModal.vue'
 import WeightLogCard from '@/components/WeightLogCard.vue'
@@ -9,7 +9,9 @@ import AppConfirmDialog from '@/components/ui/AppConfirmDialog.vue'
 import AppEmptyState from '@/components/ui/AppEmptyState.vue'
 import AppPageHeader from '@/components/ui/AppPageHeader.vue'
 import { cardioLogRepository } from '@/repositories/cardioLogRepository'
+import { settingsRepository } from '@/repositories/settingsRepository'
 import { weightLogRepository } from '@/repositories/weightLogRepository'
+import { recentWorkoutStart, shouldShowDriveBackupReminder } from '@/services/backupReminder'
 import { useUiStore } from '@/stores/ui'
 import { formatItalianDate, toDateKey } from '@/utils/date'
 import type { CardioLog, WeightLogWithSets } from '@/models'
@@ -24,6 +26,7 @@ const loading = ref(true)
 const deleting = ref<WeightLogWithSets | null>(null)
 const deletingCardio = ref<CardioLog | null>(null)
 const shareOpen = ref(false)
+const showBackupReminder = ref(false)
 const items = computed<DayItem[]>(() => [
   ...weightLogs.value.map((data): DayItem => ({ type: 'weights', data })),
   ...cardioLogs.value.map((data): DayItem => ({ type: 'cardio', data }))
@@ -34,6 +37,23 @@ async function load() {
   try { [weightLogs.value, cardioLogs.value] = await Promise.all([weightLogRepository.listByDate(today), cardioLogRepository.listByDate(today)]) }
   catch { ui.notify('Non è stato possibile caricare l’allenamento di oggi.', 'error') }
   finally { loading.value = false }
+}
+
+async function loadBackupReminder() {
+  try {
+    const from = recentWorkoutStart()
+    const [settings, recentWeights, recentCardio] = await Promise.all([
+      settingsRepository.get(),
+      weightLogRepository.listBetween(from, today),
+      cardioLogRepository.listBetween(from, today)
+    ])
+    showBackupReminder.value = shouldShowDriveBackupReminder(
+      settings.googleDriveLastSyncAt,
+      recentWeights.length > 0 || recentCardio.length > 0
+    )
+  } catch {
+    showBackupReminder.value = false
+  }
 }
 
 async function confirmDelete() {
@@ -48,12 +68,23 @@ async function confirmDeleteCardio() {
   catch { ui.notify('Non è stato possibile eliminare la registrazione.', 'error') }
 }
 
-onMounted(load)
+onMounted(() => {
+  void load()
+  void loadBackupReminder()
+})
 </script>
 
 <template>
   <div class="page">
     <AppPageHeader title="Oggi" :subtitle="formatItalianDate(today)" />
+    <aside v-if="showBackupReminder" class="backup-reminder" aria-label="Promemoria backup">
+      <CloudUpload :size="24" aria-hidden="true" />
+      <div>
+        <strong>È il momento di un backup</strong>
+        <p>Hai allenamenti recenti e non hai un backup Google Drive aggiornato negli ultimi 30 giorni.</p>
+      </div>
+      <AppButton variant="secondary" @click="$router.push('/dashboard/dati')">Vai ai dati</AppButton>
+    </aside>
     <div class="quick-actions">
       <AppButton :icon="Dumbbell" block @click="$router.push('/dashboard/pesi/nuovo')">Nuova serie pesi</AppButton>
       <AppButton :icon="Bike" variant="secondary" block @click="$router.push('/dashboard/cardio/nuovo')">Nuova serie cardio</AppButton>
@@ -78,4 +109,12 @@ onMounted(load)
   </div>
 </template>
 
-<style scoped>.quick-actions,.day-list{display:grid;gap:var(--space-3)}</style>
+<style scoped>
+.quick-actions,.day-list{display:grid;gap:var(--space-3)}
+.backup-reminder{display:grid;grid-template-columns:auto 1fr;align-items:start;gap:var(--space-3);padding:var(--space-4);border:1px solid color-mix(in srgb,var(--color-primary) 55%,var(--color-border));border-radius:var(--radius-md);background:var(--color-primary-soft);color:var(--color-accent-text)}
+.backup-reminder div{min-width:0}
+.backup-reminder strong{display:block}
+.backup-reminder p{margin:var(--space-1) 0 0;color:var(--color-text);font-size:var(--text-sm);line-height:1.5}
+.backup-reminder .app-button{grid-column:1/-1}
+@media(min-width:560px){.backup-reminder{grid-template-columns:auto 1fr auto;align-items:center}.backup-reminder .app-button{grid-column:auto}}
+</style>
