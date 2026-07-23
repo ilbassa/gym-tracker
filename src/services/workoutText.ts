@@ -33,8 +33,9 @@ function compactWeightLine(name: string, sets: WeightSet[]): string {
   const modes = new Set(sets.map((set) => set.weightMode))
   const sameMode = modes.size <= 1
   const tokens = compressConsecutiveSets(sets).map(({ set, count }) => {
-    const core = `${formatNumber(set.weight)} kg×${set.repetitions}`
-    const token = count > 1 ? `${count}×(${core})` : core
+    const hasWeight = set.weight !== 0
+    const core = hasWeight ? `${formatNumber(set.weight)} kg×${set.repetitions}` : `${set.repetitions}`
+    const token = count > 1 ? (hasWeight ? `${count}×(${core})` : `${count}×${core}`) : core
     if (sameMode) return token
     return `${token} ${set.weightMode === 'total' ? 'tot.' : 'per parte'}`
   })

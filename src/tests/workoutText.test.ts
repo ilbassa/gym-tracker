@@ -18,6 +18,8 @@ describe('compressione serie consecutive',()=>{
 describe('testo allenamento',()=>{
   it('genera il formato completo con peso totale',()=>expect(text([weightLog([[60,10]])],[],'full')).toContain('Panca piana: 60 kg totali × 10'))
   it('mantiene kg e la dicitura per parte',()=>expect(text([weightLog([[12,10,'per_side'],[12,10,'per_side']])])).toContain('2×(12 kg×10) per parte'))
+  it('toglie peso zero e parentesi',()=>expect(text([weightLog([[0,15],[0,15],[0,15]],'Situp')])).toContain('Situp: 3×15'))
+  it('mantiene per parte quando il peso è zero',()=>expect(text([weightLog([[0,8,'per_side'],[0,8,'per_side'],[0,8,'per_side']],'Obliqui - bici')])).toContain('Obliqui - bici: 3×8 per parte'))
   it('genera esercizi cardio',()=>expect(text([], [cardio])).toContain('Cyclette: 20 min'))
   it('genera una giornata mista con un esercizio per riga',()=>{const result=text([weightLog([[60,10]])],[cardio]);expect(result.split('\n').slice(2)).toEqual(['Panca piana: 60 kg×10','Cyclette: 20 min'])})
   it('mette il giorno della settimana prima della data',()=>expect(text([])).toBe('Allenamento di lunedì 20/07/2026'))
