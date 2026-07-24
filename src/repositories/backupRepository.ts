@@ -1,5 +1,5 @@
 import { db as defaultDb, type GymTrackerDatabase } from '@/db/database'
-import type { CardioLog, Exercise, Settings, WeightLog, WeightSet } from '@/models'
+import { muscleGroups, type CardioLog, type Exercise, type Settings, type WeightLog, type WeightSet } from '@/models'
 import { defaultSettings } from '@/repositories/settingsRepository'
 
 export const BACKUP_VERSION=1
@@ -10,7 +10,7 @@ function isObject(value:unknown):value is Record<string,unknown>{return typeof v
 export function validateBackup(value:unknown):value is BackupData{
   if(!isObject(value)||value.version!==BACKUP_VERSION||typeof value.exportedAt!=='string')return false
   if(!Array.isArray(value.exercises)||!Array.isArray(value.weightLogs)||!Array.isArray(value.weightSets)||!Array.isArray(value.cardioLogs)||!isObject(value.settings))return false
-  const validExercise=value.exercises.every(x=>isObject(x)&&typeof x.id==='string'&&typeof x.name==='string'&&(x.type==='weights'||x.type==='cardio'))
+  const validExercise=value.exercises.every(x=>isObject(x)&&typeof x.id==='string'&&typeof x.name==='string'&&(x.type==='weights'||x.type==='cardio')&&(x.primaryMuscleGroup===undefined||muscleGroups.some(group=>group===x.primaryMuscleGroup)))
   const validWeight=value.weightLogs.every(x=>isObject(x)&&typeof x.id==='string'&&typeof x.exerciseId==='string'&&typeof x.date==='string')
   const validSets=value.weightSets.every(x=>isObject(x)&&typeof x.id==='string'&&typeof x.weightLogId==='string'&&typeof x.weight==='number'&&typeof x.repetitions==='number')
   const validCardio=value.cardioLogs.every(x=>{if(!isObject(x)||typeof x.id!=='string'||typeof x.exerciseId!=='string'||typeof x.minutes!=='number')return false;if(x.mode!==undefined&&x.mode!=='duration'&&x.mode!=='intervals')return false;if(x.mode==='intervals'){if(!isObject(x.interval)||typeof x.interval.workSeconds!=='number'||typeof x.interval.restSeconds!=='number'||typeof x.interval.sets!=='number'||typeof x.interval.restBetweenSetsSeconds!=='number'||!Array.isArray(x.interval.exercises)||!x.interval.exercises.every(name=>typeof name==='string'))return false}return true})

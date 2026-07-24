@@ -34,9 +34,9 @@ const features = [
           <div class="hero-card__top"><span>Allenamento di oggi</span><span class="status">In corso</span></div>
           <div class="exercise-preview">
             <div class="exercise-preview__title"><span class="exercise-icon"><Dumbbell :size="20" aria-hidden="true" /></span><div><strong>Panca piana</strong><small>3 serie</small></div></div>
-            <div class="set-preview"><span>1</span><strong>60 kg</strong><span>× 10</span></div>
-            <div class="set-preview"><span>2</span><strong>60 kg</strong><span>× 10</span></div>
-            <div class="set-preview"><span>3</span><strong>60 kg</strong><span>× 8</span></div>
+            <div class="set-preview"><span>1</span><strong>60 kg</strong><span>× 10 rep</span></div>
+            <div class="set-preview"><span>2</span><strong>60 kg</strong><span>× 10 rep</span></div>
+            <div class="set-preview"><span>3</span><strong>60 kg</strong><span>× 8 rep</span></div>
           </div>
         </div>
       </section>

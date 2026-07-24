@@ -1,9 +1,11 @@
-import type { CardioLog, WeightLogWithSets, WeightMode } from '@/models'
+import { muscleGroups, type CardioLog, type Exercise, type MuscleGroup, type WeightLogWithSets, type WeightMode } from '@/models'
 
 export interface GeneralStats { trainingDays: number; weightLogs: number; totalSets: number; cardioMinutes: number; mostFrequentWeight?: string; mostFrequentCardio?: string; weeklyFrequency: number }
 export interface WeightModeStats { mode: WeightMode; sessions: number; sets: number; lastDate: string; latestWeight: number; maxWeight: number; maxRepetitions: number }
 export interface WeightExerciseStats { exerciseId: string; name: string; sessions: number; totalSets: number; lastDate: string; modes: WeightModeStats[] }
 export interface CardioExerciseStats { exerciseId: string; name: string; sessions: number; totalMinutes: number; averageMinutes: number; maxMinutes: number; lastDate: string }
+export interface MuscleGroupStats { group: MuscleGroup; sessions: number; totalSets: number; exerciseCount: number }
+export interface MuscleGroupSummary { groups: MuscleGroupStats[]; mostFrequent?: MuscleGroup; unassignedLogs: number; unassignedSets: number }
 export interface ChartPoint { label: string; value: number }
 
 function mostFrequent<T extends { exerciseName: string }>(items: T[]): string | undefined {
@@ -26,6 +28,21 @@ export function calculateWeightStats(logs:WeightLogWithSets[]):WeightExerciseSta
 export function calculateCardioStats(logs:CardioLog[]):CardioExerciseStats[]{
   const ids=[...new Set(logs.map(l=>l.exerciseId))]
   return ids.map(exerciseId=>{const entries=logs.filter(l=>l.exerciseId===exerciseId).sort((a,b)=>b.date.localeCompare(a.date)||b.createdAt.localeCompare(a.createdAt));const total=entries.reduce((s,l)=>s+l.minutes,0);return{exerciseId,name:entries[0]!.exerciseName,sessions:entries.length,totalMinutes:total,averageMinutes:Number((total/entries.length).toFixed(1)),maxMinutes:Math.max(...entries.map(l=>l.minutes)),lastDate:entries[0]!.date}}).sort((a,b)=>b.sessions-a.sessions||a.name.localeCompare(b.name,'it-IT'))
+}
+
+export function calculateMuscleGroupStats(logs:WeightLogWithSets[],exercises:Exercise[]):MuscleGroupSummary{
+  const groupByExercise=new Map(exercises.map(exercise=>[exercise.id,exercise.primaryMuscleGroup]))
+  const grouped=new Map<MuscleGroup,{sessions:number;totalSets:number;exerciseIds:Set<string>}>()
+  let unassignedLogs=0,unassignedSets=0
+  for(const log of logs){
+    const group=groupByExercise.get(log.exerciseId)
+    if(!group){unassignedLogs++;unassignedSets+=log.sets.length;continue}
+    const current=grouped.get(group)??{sessions:0,totalSets:0,exerciseIds:new Set<string>()}
+    current.sessions++;current.totalSets+=log.sets.length;current.exerciseIds.add(log.exerciseId);grouped.set(group,current)
+  }
+  const groups=muscleGroups.flatMap(group=>{const current=grouped.get(group);return current?[{group,sessions:current.sessions,totalSets:current.totalSets,exerciseCount:current.exerciseIds.size}]:[]})
+  const mostFrequent=[...groups].sort((a,b)=>b.sessions-a.sessions||b.totalSets-a.totalSets)[0]?.group
+  return{groups,mostFrequent,unassignedLogs,unassignedSets}
 }
 
 function mondayKey(date:string):string{const d=new Date(`${date}T12:00:00`),day=(d.getDay()+6)%7;d.setDate(d.getDate()-day);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}

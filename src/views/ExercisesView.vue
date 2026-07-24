@@ -9,12 +9,13 @@ import AppIconButton from '@/components/ui/AppIconButton.vue'
 import AppInput from '@/components/ui/AppInput.vue'
 import AppModal from '@/components/ui/AppModal.vue'
 import AppPageHeader from '@/components/ui/AppPageHeader.vue'
+import AppSelect from '@/components/ui/AppSelect.vue'
 import AppSegmentedControl from '@/components/ui/AppSegmentedControl.vue'
 import { DuplicateExerciseError, exerciseRepository } from '@/repositories/exerciseRepository'
 import { loadDemoExercises } from '@/services/demoData'
 import { useUiStore } from '@/stores/ui'
 import { formatItalianDate } from '@/utils/date'
-import type { ExerciseType, ExerciseWithLastUse } from '@/models'
+import { muscleGroups, type ExerciseType, type ExerciseWithLastUse, type MuscleGroup } from '@/models'
 
 const ui = useUiStore()
 const isDevelopment = import.meta.env.DEV
@@ -25,8 +26,13 @@ const search = ref('')
 const editing = ref<ExerciseWithLastUse | null>(null)
 const editName = ref('')
 const editType = ref<ExerciseType>('weights')
+const editPrimaryMuscleGroup = ref<MuscleGroup | ''>('')
 const error = ref('')
 const confirmTypeChange = ref(false)
+const muscleGroupOptions = [
+  { value: '', label: 'Non specificato' },
+  ...muscleGroups.map((group) => ({ value: group, label: group.charAt(0).toLocaleUpperCase('it-IT') + group.slice(1) }))
+]
 
 const visibleExercises = computed(() => {
   const query = search.value.trim().toLocaleLowerCase('it-IT')
@@ -44,6 +50,7 @@ function startEdit(exercise: ExerciseWithLastUse) {
   editing.value = exercise
   editName.value = exercise.name
   editType.value = exercise.type
+  editPrimaryMuscleGroup.value = exercise.primaryMuscleGroup ?? ''
   error.value = ''
 }
 
@@ -57,7 +64,11 @@ function requestSave() {
 async function saveEdit() {
   if (!editing.value) return
   try {
-    await exerciseRepository.update(editing.value.id, { name: editName.value, type: editType.value })
+    await exerciseRepository.update(editing.value.id, {
+      name: editName.value,
+      type: editType.value,
+      primaryMuscleGroup: editPrimaryMuscleGroup.value || undefined
+    })
     confirmTypeChange.value = false
     editing.value = null
     await load()
@@ -119,6 +130,7 @@ onMounted(load)
       <div class="stack">
         <AppInput v-model="editName" label="Nome esercizio" :error="error" required />
         <AppSegmentedControl v-model="editType" label="Tipo esercizio" :options="[{ value: 'weights', label: 'Pesi' }, { value: 'cardio', label: 'Cardio' }]" />
+        <AppSelect v-model="editPrimaryMuscleGroup" label="Gruppo muscolare principale" :options="muscleGroupOptions" />
         <p class="muted help">Il cambio di tipo non modifica le registrazioni storiche.</p>
       </div>
       <template #footer><AppButton variant="ghost" @click="editing = null">Annulla</AppButton><AppButton @click="requestSave">Salva</AppButton></template>

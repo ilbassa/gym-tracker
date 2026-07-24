@@ -31,4 +31,15 @@ describe('nomi esercizi', () => {
     await exercises.create('Stepper', 'weights')
     await expect(exercises.create('STEPPER', 'cardio')).resolves.toMatchObject({ type: 'cardio' })
   })
+
+  it('salva il gruppo muscolare principale durante la modifica', async () => {
+    const exercises = repository()
+    const exercise = await exercises.create('Panca piana', 'weights')
+
+    await expect(exercises.update(exercise.id, {
+      name: exercise.name,
+      type: exercise.type,
+      primaryMuscleGroup: 'petto'
+    })).resolves.toMatchObject({ primaryMuscleGroup: 'petto' })
+  })
 })

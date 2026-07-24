@@ -1,5 +1,5 @@
 import { db as defaultDb, type GymTrackerDatabase } from '@/db/database'
-import type { Exercise, ExerciseType, ExerciseWithLastUse } from '@/models'
+import type { Exercise, ExerciseType, ExerciseWithLastUse, MuscleGroup } from '@/models'
 import { cleanExerciseName, normalizeExerciseName } from '@/utils/exercise'
 import { createId } from '@/utils/id'
 
@@ -44,7 +44,7 @@ export class ExerciseRepository {
     return this.create(name, type)
   }
 
-  async update(id: string, changes: { name: string; type: ExerciseType }): Promise<Exercise> {
+  async update(id: string, changes: { name: string; type: ExerciseType; primaryMuscleGroup?: MuscleGroup }): Promise<Exercise> {
     const current = await this.get(id)
     if (!current) throw new Error('Esercizio non trovato.')
     const cleanedName = cleanExerciseName(changes.name)

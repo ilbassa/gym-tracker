@@ -18,8 +18,9 @@ import { useUiStore } from '@/stores/ui'
 import { formatItalianDate, toDateKey } from '@/utils/date'
 import { normalizeExerciseName } from '@/utils/exercise'
 import { createId } from '@/utils/id'
-import { formatNumber, parseItalianDecimal } from '@/utils/number'
+import { parseItalianDecimal } from '@/utils/number'
 import { duplicateLastSet, validateWeightSets } from '@/utils/weightSets'
+import { formatWeightSet } from '@/utils/weightDisplay'
 import type { Exercise, WeightLogWithSets, WeightMode, WeightSetDraft } from '@/models'
 
 interface EditableSet { key: string; weight: string; weightMode: WeightMode; repetitions: string }
@@ -137,7 +138,7 @@ async function resolveConflict(action: 'append' | 'separate') {
 
       <AppCard v-if="latest" class="latest-card">
         <div class="latest-card__header"><div><p class="eyebrow">Ultima volta</p><strong>{{ formatItalianDate(latest.date, { day: '2-digit', month: '2-digit', year: 'numeric' }) }}</strong></div><AppButton variant="secondary" :icon="Copy" @click="copyLatest">Copia</AppButton></div>
-        <ol><li v-for="set in latest.sets" :key="set.id">{{ formatNumber(set.weight) }} kg {{ set.weightMode === 'total' ? 'totali' : 'per parte' }} × {{ set.repetitions }}</li></ol>
+        <ol><li v-for="set in latest.sets" :key="set.id">{{ formatWeightSet(set, true) }}</li></ol>
       </AppCard>
 
       <AppTextarea v-model="notes" label="Note (facoltative)" />

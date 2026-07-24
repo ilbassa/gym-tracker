@@ -1,6 +1,7 @@
 import type { CardioLog, WeightLogWithSets, WeightSet } from '@/models'
 import { formatItalianDate } from '@/utils/date'
 import { formatNumber } from '@/utils/number'
+import { formatWeightSet } from '@/utils/weightDisplay'
 import { formatSeconds } from '@/services/cardioIntervals'
 
 export interface SetRun { set: Pick<WeightSet, 'weight' | 'weightMode' | 'repetitions'>; count: number }
@@ -26,7 +27,7 @@ function groupedWeights(logs: WeightLogWithSets[]): Array<{ name: string; sets: 
 }
 
 function fullWeightLine(name: string, sets: WeightSet[]): string {
-  return `${name}: ${sets.map((set) => `${formatNumber(set.weight)} kg ${set.weightMode === 'total' ? 'totali' : 'per parte'} × ${set.repetitions}`).join('; ')}`
+  return `${name}: ${sets.map((set) => formatWeightSet(set, true)).join('; ')}`
 }
 
 function compactWeightLine(name: string, sets: WeightSet[]): string {
@@ -34,7 +35,7 @@ function compactWeightLine(name: string, sets: WeightSet[]): string {
   const sameMode = modes.size <= 1
   const tokens = compressConsecutiveSets(sets).map(({ set, count }) => {
     const hasWeight = set.weight !== 0
-    const core = hasWeight ? `${formatNumber(set.weight)} kg×${set.repetitions}` : `${set.repetitions}`
+    const core = hasWeight ? `${formatNumber(set.weight)} kg×${set.repetitions} rep` : `${set.repetitions} rep`
     const token = count > 1 ? (hasWeight ? `${count}×(${core})` : `${count}×${core}`) : core
     if (sameMode) return token
     return `${token} ${set.weightMode === 'total' ? 'tot.' : 'per parte'}`

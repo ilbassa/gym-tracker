@@ -1,4 +1,6 @@
 export type ExerciseType = 'weights' | 'cardio'
+export const muscleGroups = ['petto', 'spalle', 'dorso', 'braccia', 'gambe', 'core'] as const
+export type MuscleGroup = typeof muscleGroups[number]
 export type WeightMode = 'total' | 'per_side'
 export type CardioMode = 'duration' | 'intervals'
 
@@ -23,6 +25,7 @@ export interface Exercise {
   name: string
   normalizedName: string
   type: ExerciseType
+  primaryMuscleGroup?: MuscleGroup
   active: boolean
   createdAt: string
   updatedAt: string
