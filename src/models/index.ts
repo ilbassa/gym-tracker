@@ -2,6 +2,7 @@ export type ExerciseType = 'weights' | 'cardio'
 export const muscleGroups = ['petto', 'spalle', 'dorso', 'braccia', 'gambe', 'core'] as const
 export type MuscleGroup = typeof muscleGroups[number]
 export type WeightMode = 'total' | 'per_side'
+export type DurationUnit = 'seconds' | 'minutes'
 export type CardioMode = 'duration' | 'intervals'
 
 export interface CardioIntervalDetails {
@@ -48,6 +49,8 @@ export interface WeightSet {
   weight: number
   weightMode: WeightMode
   repetitions: number
+  durationSeconds?: number
+  durationUnit?: DurationUnit
   createdAt: string
   updatedAt: string
 }
@@ -90,4 +93,6 @@ export interface WeightSetDraft {
   weight: number
   weightMode: WeightMode
   repetitions: number
+  durationSeconds?: number
+  durationUnit?: DurationUnit
 }

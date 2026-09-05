@@ -21,12 +21,15 @@ const describedBy = computed(() => props.error ? `${id}-error` : props.hint ? `$
 </script>
 
 <template>
-  <label class="field" :class="{ 'field--compact': compact }" :for="id">
-    <span class="field__label">{{ label }}<span v-if="required" aria-hidden="true"> *</span></span>
+  <div class="field" :class="{ 'field--compact': compact }">
+    <label class="field__label" :for="id">{{ label }}<span v-if="required" aria-hidden="true"> *</span></label>
+    <div class="field__input" :class="{ 'field__input--suffix': $slots.suffix }">
     <input :id="id" class="field__control" :class="{ 'field__control--error': error }" :value="modelValue" :type="type" :inputmode="inputmode" :min="min" :step="step" :autocomplete="autocomplete" :list="list" :required="required" :aria-invalid="Boolean(error)" :aria-describedby="describedBy" @input="emit('update:modelValue', ($event.target as HTMLInputElement).value)" />
+      <div v-if="$slots.suffix" class="field__suffix"><slot name="suffix" /></div>
+    </div>
     <span v-if="error" :id="`${id}-error`" class="field__error">{{ error }}</span>
     <span v-else-if="hint" :id="`${id}-hint`" class="field__hint">{{ hint }}</span>
-  </label>
+  </div>
 </template>
 
 <style scoped>
@@ -40,4 +43,7 @@ const describedBy = computed(() => props.error ? `${id}-error` : props.hint ? `$
 .field--compact .field__label { font-size: var(--text-xs); }
 .field--compact .field__control { min-height: 44px; padding: 0 var(--space-2); font-variant-numeric: tabular-nums; }
 .field--compact .field__error { font-size: var(--text-xs); }
+.field__input { position: relative; min-width: 0; }
+.field__input--suffix .field__control { padding-right: 48px; }
+.field__suffix { position: absolute; top: 1px; right: 1px; bottom: 1px; display: flex; align-items: center; }
 </style>

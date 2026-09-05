@@ -1,6 +1,7 @@
 import { db as defaultDb, type GymTrackerDatabase } from '@/db/database'
 import type { WeightLog, WeightLogWithSets, WeightSetDraft } from '@/models'
 import { createId } from '@/utils/id'
+import { validateWeightSets } from '@/utils/weightSets'
 
 export interface SaveWeightLogInput {
   id?: string
@@ -47,8 +48,8 @@ export class WeightLogRepository {
 
   async save(input: SaveWeightLogInput): Promise<WeightLogWithSets> {
     if (!input.sets.length) throw new Error('Aggiungi almeno una serie.')
-    if (input.sets.some((set) => !Number.isFinite(set.weight) || set.weight < 0)) throw new Error('Il peso deve essere maggiore o uguale a zero.')
-    if (input.sets.some((set) => !Number.isInteger(set.repetitions) || set.repetitions <= 0)) throw new Error('Le ripetizioni devono essere intere e maggiori di zero.')
+    const errors = Object.values(validateWeightSets(input.sets))[0]
+    if (errors) throw new Error(errors.weight ?? errors.duration ?? errors.repetitions)
     const existing = input.id ? await this.database.weightLogs.get(input.id) : undefined
     const now = new Date().toISOString()
     const log: WeightLog = {
@@ -60,7 +61,9 @@ export class WeightLogRepository {
       await this.database.weightSets.where('weightLogId').equals(log.id).delete()
       await this.database.weightSets.bulkAdd(input.sets.map((set, index) => ({
         id: createId(), weightLogId: log.id, position: index + 1, weight: set.weight,
-        weightMode: set.weightMode, repetitions: set.repetitions, createdAt: now, updatedAt: now
+        weightMode: set.weightMode, repetitions: set.repetitions,
+        ...(set.durationSeconds !== undefined ? { durationSeconds: set.durationSeconds, durationUnit: set.durationUnit ?? 'seconds' } : {}),
+        createdAt: now, updatedAt: now
       })))
     })
     return (await this.get(log.id))!
@@ -69,7 +72,7 @@ export class WeightLogRepository {
   async appendSets(id: string, sets: WeightSetDraft[]): Promise<WeightLogWithSets> {
     const current = await this.get(id)
     if (!current) throw new Error('Registrazione non trovata.')
-    return this.save({ ...current, id, sets: [...current.sets, ...sets].map(({ weight, weightMode, repetitions }) => ({ weight, weightMode, repetitions })) })
+    return this.save({ ...current, id, sets: [...current.sets, ...sets] })
   }
 
   async delete(id: string): Promise<void> {

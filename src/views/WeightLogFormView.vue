@@ -21,9 +21,9 @@ import { createId } from '@/utils/id'
 import { parseItalianDecimal } from '@/utils/number'
 import { duplicateLastSet, validateWeightSets } from '@/utils/weightSets'
 import { formatWeightSet } from '@/utils/weightDisplay'
-import type { Exercise, WeightLogWithSets, WeightMode, WeightSetDraft } from '@/models'
+import type { DurationUnit, Exercise, WeightLogWithSets, WeightMode, WeightSetDraft } from '@/models'
 
-interface EditableSet { key: string; weight: string; weightMode: WeightMode; repetitions: string }
+interface EditableSet { key: string; weight: string; weightMode: WeightMode; repetitions: string; timed: boolean; duration: string; durationUnit: DurationUnit }
 
 const route = useRoute()
 const router = useRouter()
@@ -39,12 +39,34 @@ const loading = ref(true)
 const saving = ref(false)
 const exerciseError = ref('')
 const formError = ref('')
-const setErrors = ref<Record<number, { weight?: string; repetitions?: string }>>({})
+const setErrors = ref<Record<number, { weight?: string; repetitions?: string; duration?: string }>>({})
 const conflict = ref<{ existing: WeightLogWithSets; input: SaveWeightLogInput } | null>(null)
 let latestRequest = 0
 
 const selectedExercise = computed(() => exercises.value.find((exercise) => exercise.normalizedName === normalizeExerciseName(exerciseName.value)))
-const emptySet = (mode: WeightMode): EditableSet => ({ key: createId(), weight: '0', weightMode: mode, repetitions: '10' })
+const emptySet = (mode: WeightMode): EditableSet => ({ key: createId(), weight: '0', weightMode: mode, repetitions: '10', timed: false, duration: '', durationUnit: 'seconds' })
+
+function editableSet(set: WeightSetDraft): EditableSet {
+  const durationUnit = set.durationUnit ?? 'seconds'
+  return { key: createId(), weight: String(set.weight), weightMode: set.weightMode,
+    repetitions: set.durationSeconds === undefined ? String(set.repetitions) : '10',
+    timed: set.durationSeconds !== undefined, durationUnit,
+    duration: set.durationSeconds === undefined ? '' : String(set.durationSeconds / (durationUnit === 'minutes' ? 60 : 1)) }
+}
+
+function setTimed(set: EditableSet, timed: boolean) {
+  set.timed = timed
+  setErrors.value = {}
+}
+
+function changeDurationUnit(set: EditableSet, event: Event) {
+  const unit = (event.target as HTMLSelectElement).value as DurationUnit
+  const value = parseItalianDecimal(set.duration)
+  if (set.duration.trim() && Number.isFinite(value) && unit !== set.durationUnit) {
+    set.duration = String(Number((unit === 'minutes' ? value / 60 : value * 60).toFixed(10)))
+  }
+  set.durationUnit = unit
+}
 
 onMounted(async () => {
   try {
@@ -57,7 +79,7 @@ onMounted(async () => {
       date.value = log.date
       exerciseName.value = log.exerciseName
       notes.value = log.notes
-      sets.value = log.sets.map((set) => ({ key: set.id, weight: String(set.weight), weightMode: set.weightMode, repetitions: String(set.repetitions) }))
+      sets.value = log.sets.map(editableSet)
     }
   } catch { formError.value = 'Non è stato possibile caricare il modulo.' }
   finally { loading.value = false }
@@ -81,12 +103,14 @@ function removeSet(index: number) { sets.value.splice(index, 1); setErrors.value
 
 function copyLatest() {
   if (!latest.value) return
-  sets.value = latest.value.sets.map((set) => ({ key: createId(), weight: String(set.weight), weightMode: set.weightMode, repetitions: String(set.repetitions) }))
+  sets.value = latest.value.sets.map(editableSet)
   ui.notify('Ultima registrazione copiata.', 'success')
 }
 
 function parsedSets(): WeightSetDraft[] {
-  return sets.value.map((set) => ({ weight: parseItalianDecimal(set.weight), weightMode: set.weightMode, repetitions: parseItalianDecimal(set.repetitions) }))
+  return sets.value.map((set) => ({ weight: parseItalianDecimal(set.weight), weightMode: set.weightMode,
+    repetitions: set.timed ? 0 : parseItalianDecimal(set.repetitions),
+    ...(set.timed ? { durationSeconds: Number((parseItalianDecimal(set.duration) * (set.durationUnit === 'minutes' ? 60 : 1)).toFixed(8)), durationUnit: set.durationUnit } : {}) }))
 }
 
 async function submit() {
@@ -147,10 +171,24 @@ async function resolveConflict(action: 'append' | 'separate') {
         <div class="section-header"><div><p class="eyebrow">Dettagli allenamento</p><h2 id="sets-title">Serie</h2></div><AppButton variant="secondary" :icon="Plus" @click="addSet">Aggiungi serie</AppButton></div>
         <p v-if="!sets.length" class="field-error">Aggiungi almeno una serie.</p>
         <AppCard v-for="(set, index) in sets" :key="set.key" class="set-card" compact>
-          <header><strong>Serie {{ index + 1 }}</strong><AppIconButton label="Elimina serie" :icon="Trash2" danger @click="removeSet(index)" /></header>
+          <header>
+            <strong>Serie {{ index + 1 }}</strong>
+            <div class="set-mode" role="group" :aria-label="`Modalità serie ${index + 1}`">
+              <button type="button" :aria-pressed="!set.timed" @click="setTimed(set, false)">Ripetizioni</button>
+              <button type="button" :aria-pressed="set.timed" @click="setTimed(set, true)">A tempo</button>
+            </div>
+            <AppIconButton label="Elimina serie" :icon="Trash2" danger @click="removeSet(index)" />
+          </header>
           <div class="set-grid">
             <AppInput v-model="set.weight" label="Peso kg" inputmode="decimal" :error="setErrors[index]?.weight" compact required />
-            <AppInput v-model="set.repetitions" label="Ripetiz." inputmode="numeric" :error="setErrors[index]?.repetitions" compact required />
+            <AppInput v-if="!set.timed" v-model="set.repetitions" label="Ripetiz." inputmode="numeric" :error="setErrors[index]?.repetitions" compact required />
+            <AppInput v-else v-model="set.duration" label="Durata" inputmode="decimal" :error="setErrors[index]?.duration" compact required>
+              <template #suffix>
+                <select class="duration-unit" :aria-label="`Unità durata serie ${index + 1}`" :value="set.durationUnit" @change="changeDurationUnit(set, $event)">
+                  <option value="seconds">s</option><option value="minutes">min</option>
+                </select>
+              </template>
+            </AppInput>
             <AppSelect v-model="set.weightMode" label="Carico" :options="[{ value: 'total', label: 'Totale' }, { value: 'per_side', label: 'Per parte' }]" compact />
           </div>
         </AppCard>
@@ -168,5 +206,10 @@ async function resolveConflict(action: 'append' | 'separate') {
 </template>
 
 <style scoped>
-.latest-card__header,.section-header,.set-card header{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3)}.latest-card ol{display:grid;gap:var(--space-1);margin:var(--space-3) 0 0;padding-left:1.5rem;color:var(--color-text-muted)}.section-header h2{margin:0;font-size:var(--text-lg)}.sets-section{display:grid;gap:var(--space-2)}.set-card{display:grid;gap:var(--space-1)}.set-card header{min-height:36px}.set-card header strong{font-size:var(--text-sm)}.set-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.8fr) minmax(0,1.15fr);gap:var(--space-2);align-items:start}.field-error,.form-error{margin:0;color:var(--color-danger);font-size:var(--text-sm)}.conflict-copy{margin:0;line-height:1.55}.conflict-actions{display:flex;flex:1;flex-wrap:wrap;justify-content:flex-end;gap:var(--space-2)}@media(max-width:410px){.conflict-actions>*{width:100%}}
+.set-card header strong { white-space: nowrap; }
+.set-mode { display: flex; padding: 3px; border-radius: var(--radius-sm); background: var(--color-surface-subtle); }
+.set-mode button { min-height: 36px; padding: 0 var(--space-2); border: 0; border-radius: 6px; background: transparent; color: var(--color-text-muted); font-size: var(--text-xs); font-weight: 700; white-space: nowrap; cursor: pointer; }
+.set-mode button[aria-pressed="true"] { background: var(--color-surface); color: var(--color-accent-text); box-shadow: var(--shadow-card); }
+.duration-unit { width: 46px; height: 100%; padding-left: 3px; border: 0; border-left: 1px solid var(--color-border); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; background: transparent; color: var(--color-text); font-size: var(--text-xs); cursor: pointer; }
+.latest-card__header,.section-header,.set-card header{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3)}.latest-card ol{display:grid;gap:var(--space-1);margin:var(--space-3) 0 0;padding-left:1.5rem;color:var(--color-text-muted)}.section-header h2{margin:0;font-size:var(--text-lg)}.sets-section{display:grid;gap:var(--space-2)}.set-card{display:grid;gap:var(--space-1)}.set-card header{min-height:36px}.set-card header{gap:var(--space-1)}.set-card header strong{font-size:var(--text-sm)}.set-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(100px,1fr) minmax(0,1.15fr);gap:var(--space-2);align-items:start}.field-error,.form-error{margin:0;color:var(--color-danger);font-size:var(--text-sm)}.conflict-copy{margin:0;line-height:1.55}.conflict-actions{display:flex;flex:1;flex-wrap:wrap;justify-content:flex-end;gap:var(--space-2)}@media(max-width:410px){.conflict-actions>*{width:100%}}
 </style>

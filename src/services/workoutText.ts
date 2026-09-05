@@ -1,16 +1,16 @@
 import type { CardioLog, WeightLogWithSets, WeightSet } from '@/models'
 import { formatItalianDate } from '@/utils/date'
 import { formatNumber } from '@/utils/number'
-import { formatWeightSet } from '@/utils/weightDisplay'
+import { formatWeightSet, formatSetQuantity, type DisplayWeightSet } from '@/utils/weightDisplay'
 import { formatSeconds } from '@/services/cardioIntervals'
 
-export interface SetRun { set: Pick<WeightSet, 'weight' | 'weightMode' | 'repetitions'>; count: number }
+export interface SetRun { set: DisplayWeightSet; count: number }
 export interface WorkoutTextInput { date: string; weightLogs: WeightLogWithSets[]; cardioLogs: CardioLog[]; format: 'full' | 'compact'; showDate?: boolean }
 
-export function compressConsecutiveSets(sets: Array<Pick<WeightSet, 'weight' | 'weightMode' | 'repetitions'>>): SetRun[] {
+export function compressConsecutiveSets(sets: DisplayWeightSet[]): SetRun[] {
   return sets.reduce<SetRun[]>((runs, set) => {
     const last = runs.at(-1)
-    if (last && last.set.weight === set.weight && last.set.weightMode === set.weightMode && last.set.repetitions === set.repetitions) last.count++
+    if (last && last.set.weight === set.weight && last.set.weightMode === set.weightMode && last.set.repetitions === set.repetitions && last.set.durationSeconds === set.durationSeconds) last.count++
     else runs.push({ set, count: 1 })
     return runs
   }, [])
@@ -35,7 +35,7 @@ function compactWeightLine(name: string, sets: WeightSet[]): string {
   const sameMode = modes.size <= 1
   const tokens = compressConsecutiveSets(sets).map(({ set, count }) => {
     const hasWeight = set.weight !== 0
-    const core = hasWeight ? `${formatNumber(set.weight)} kg×${set.repetitions} rep` : `${set.repetitions} rep`
+    const core = hasWeight ? `${formatNumber(set.weight)} kg×${formatSetQuantity(set)}` : formatSetQuantity(set)
     const token = count > 1 ? (hasWeight ? `${count}×(${core})` : `${count}×${core}`) : core
     if (sameMode) return token
     return `${token} ${set.weightMode === 'total' ? 'tot.' : 'per parte'}`

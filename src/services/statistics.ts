@@ -1,7 +1,7 @@
 import { muscleGroups, type CardioLog, type Exercise, type MuscleGroup, type WeightLogWithSets, type WeightMode } from '@/models'
 
 export interface GeneralStats { trainingDays: number; weightLogs: number; totalSets: number; cardioMinutes: number; mostFrequentWeight?: string; mostFrequentCardio?: string; weeklyFrequency: number }
-export interface WeightModeStats { mode: WeightMode; sessions: number; sets: number; lastDate: string; latestWeight: number; maxWeight: number; maxRepetitions: number }
+export interface WeightModeStats { mode: WeightMode; sessions: number; sets: number; lastDate: string; latestWeight: number; maxWeight: number; maxRepetitions: number; maxDurationSeconds: number }
 export interface WeightExerciseStats { exerciseId: string; name: string; sessions: number; totalSets: number; lastDate: string; modes: WeightModeStats[] }
 export interface CardioExerciseStats { exerciseId: string; name: string; sessions: number; totalMinutes: number; averageMinutes: number; maxMinutes: number; lastDate: string }
 export interface MuscleGroupStats { group: MuscleGroup; sessions: number; totalSets: number; exerciseCount: number }
@@ -22,7 +22,7 @@ export function calculateGeneralStats(weights:WeightLogWithSets[],cardio:CardioL
 
 export function calculateWeightStats(logs:WeightLogWithSets[]):WeightExerciseStats[]{
   const ids=[...new Set(logs.map(l=>l.exerciseId))]
-  return ids.map(exerciseId=>{const exerciseLogs=logs.filter(l=>l.exerciseId===exerciseId).sort((a,b)=>b.date.localeCompare(a.date)||b.createdAt.localeCompare(a.createdAt));const modes:WeightModeStats[]=(['total','per_side'] as WeightMode[]).flatMap(mode=>{const modeLogs=exerciseLogs.map(log=>({log,sets:log.sets.filter(s=>s.weightMode===mode)})).filter(x=>x.sets.length);if(!modeLogs.length)return[];const all=modeLogs.flatMap(x=>x.sets);return[{mode,sessions:modeLogs.length,sets:all.length,lastDate:modeLogs[0]!.log.date,latestWeight:modeLogs[0]!.sets.at(-1)!.weight,maxWeight:Math.max(...all.map(s=>s.weight)),maxRepetitions:Math.max(...all.map(s=>s.repetitions))}]});return{exerciseId,name:exerciseLogs[0]!.exerciseName,sessions:exerciseLogs.length,totalSets:exerciseLogs.reduce((s,l)=>s+l.sets.length,0),lastDate:exerciseLogs[0]!.date,modes}}).sort((a,b)=>b.sessions-a.sessions||a.name.localeCompare(b.name,'it-IT'))
+  return ids.map(exerciseId=>{const exerciseLogs=logs.filter(l=>l.exerciseId===exerciseId).sort((a,b)=>b.date.localeCompare(a.date)||b.createdAt.localeCompare(a.createdAt));const modes:WeightModeStats[]=(['total','per_side'] as WeightMode[]).flatMap(mode=>{const modeLogs=exerciseLogs.map(log=>({log,sets:log.sets.filter(s=>s.weightMode===mode)})).filter(x=>x.sets.length);if(!modeLogs.length)return[];const all=modeLogs.flatMap(x=>x.sets);return[{mode,sessions:modeLogs.length,sets:all.length,lastDate:modeLogs[0]!.log.date,latestWeight:modeLogs[0]!.sets.at(-1)!.weight,maxWeight:Math.max(...all.map(s=>s.weight)),maxRepetitions:Math.max(0,...all.filter(s=>s.durationSeconds===undefined).map(s=>s.repetitions)),maxDurationSeconds:Math.max(0,...all.map(s=>s.durationSeconds??0))}]});return{exerciseId,name:exerciseLogs[0]!.exerciseName,sessions:exerciseLogs.length,totalSets:exerciseLogs.reduce((s,l)=>s+l.sets.length,0),lastDate:exerciseLogs[0]!.date,modes}}).sort((a,b)=>b.sessions-a.sessions||a.name.localeCompare(b.name,'it-IT'))
 }
 
 export function calculateCardioStats(logs:CardioLog[]):CardioExerciseStats[]{
