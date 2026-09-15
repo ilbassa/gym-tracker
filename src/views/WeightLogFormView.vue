@@ -80,6 +80,10 @@ onMounted(async () => {
       exerciseName.value = log.exerciseName
       notes.value = log.notes
       sets.value = log.sets.map(editableSet)
+    } else {
+      const suggestedId = typeof route.query?.exerciseId === 'string' ? route.query.exerciseId : undefined
+      const suggestedExercise = availableExercises.find((exercise) => exercise.id === suggestedId && exercise.active)
+      if (suggestedExercise) exerciseName.value = suggestedExercise.name
     }
   } catch { formError.value = 'Non è stato possibile caricare il modulo.' }
   finally { loading.value = false }
