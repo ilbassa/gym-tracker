@@ -1,14 +1,17 @@
-import type { ExerciseWithLastUse } from '@/models'
+import type { ExerciseWithLastUse, MuscleGroup } from '@/models'
 
 export function selectExerciseSuggestions(
   exercises: ExerciseWithLastUse[],
   completedExerciseIds: Iterable<string> = [],
-  limit = 3
+  limit = 6,
+  muscleGroup?: MuscleGroup
 ): ExerciseWithLastUse[] {
   const completed = new Set(completedExerciseIds)
 
   return exercises
-    .filter((exercise) => exercise.active && !completed.has(exercise.id))
+    .filter((exercise) => exercise.active
+      && !completed.has(exercise.id)
+      && (!muscleGroup || exercise.primaryMuscleGroup === muscleGroup))
     .sort((a, b) => {
       if (a.lastUsedAt && b.lastUsedAt) {
         const byLastUse = a.lastUsedAt.localeCompare(b.lastUsedAt)

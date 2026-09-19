@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ArrowRight, Bike, CloudUpload, Dumbbell, Lightbulb, Share2 } from 'lucide-vue-next'
 import CardioLogCard from '@/components/CardioLogCard.vue'
@@ -10,6 +10,7 @@ import AppCard from '@/components/ui/AppCard.vue'
 import AppConfirmDialog from '@/components/ui/AppConfirmDialog.vue'
 import AppEmptyState from '@/components/ui/AppEmptyState.vue'
 import AppPageHeader from '@/components/ui/AppPageHeader.vue'
+import AppSelect from '@/components/ui/AppSelect.vue'
 import { cardioLogRepository } from '@/repositories/cardioLogRepository'
 import { exerciseRepository } from '@/repositories/exerciseRepository'
 import { settingsRepository } from '@/repositories/settingsRepository'
@@ -18,7 +19,8 @@ import { recentWorkoutStart, shouldShowDriveBackupReminder } from '@/services/ba
 import { selectExerciseSuggestions } from '@/services/exerciseSuggestions'
 import { useUiStore } from '@/stores/ui'
 import { formatItalianDate, toDateKey } from '@/utils/date'
-import type { CardioLog, ExerciseWithLastUse, WeightLogWithSets } from '@/models'
+import { muscleGroups } from '@/models'
+import type { CardioLog, ExerciseWithLastUse, MuscleGroup, WeightLogWithSets } from '@/models'
 
 type DayItem = { type: 'weights'; data: WeightLogWithSets } | { type: 'cardio'; data: CardioLog }
 
@@ -33,14 +35,34 @@ const deleting = ref<WeightLogWithSets | null>(null)
 const deletingCardio = ref<CardioLog | null>(null)
 const shareOpen = ref(false)
 const showBackupReminder = ref(false)
+const selectedMuscleGroup = ref<'' | MuscleGroup>('')
+const visibleSuggestionCount = ref(6)
+const muscleGroupOptions = [
+  { value: '', label: 'Tutti i gruppi' },
+  ...muscleGroups.map((group) => ({
+    value: group,
+    label: group.charAt(0).toLocaleUpperCase('it-IT') + group.slice(1)
+  }))
+]
 const items = computed<DayItem[]>(() => [
   ...weightLogs.value.map((data): DayItem => ({ type: 'weights', data })),
   ...cardioLogs.value.map((data): DayItem => ({ type: 'cardio', data }))
 ].sort((a, b) => a.data.createdAt.localeCompare(b.data.createdAt)))
-const suggestions = computed(() => selectExerciseSuggestions(
+const allSuggestions = computed(() => selectExerciseSuggestions(
   exercises.value,
-  items.value.map((item) => item.data.exerciseId)
+  items.value.map((item) => item.data.exerciseId),
+  exercises.value.length
 ))
+const filteredSuggestions = computed(() => selectExerciseSuggestions(
+  exercises.value,
+  items.value.map((item) => item.data.exerciseId),
+  exercises.value.length,
+  selectedMuscleGroup.value || undefined
+))
+const suggestions = computed(() => filteredSuggestions.value.slice(0, visibleSuggestionCount.value))
+const hiddenSuggestionCount = computed(() => filteredSuggestions.value.length - suggestions.value.length)
+
+watch(selectedMuscleGroup, () => { visibleSuggestionCount.value = 6 })
 
 async function load() {
   loading.value = true
@@ -114,14 +136,15 @@ onMounted(() => {
       <AppButton :icon="Share2" variant="ghost" block :disabled="!items.length" @click="shareOpen=true">Condividi allenamento</AppButton>
     </div>
 
-    <section v-if="!loading && suggestions.length" class="suggestions" aria-labelledby="suggestions-title">
+    <section v-if="!loading && allSuggestions.length" class="suggestions" aria-labelledby="suggestions-title">
       <div class="suggestions__heading">
         <div class="suggestions__icon"><Lightbulb :size="22" aria-hidden="true" /></div>
         <div>
           <h2 id="suggestions-title">Cosa potresti fare oggi</h2>
-          <p>Prima gli esercizi che non fai da più tempo.</p>
+          <p>Prima gli esercizi che non fai da più tempo, con più alternative tra cui scegliere.</p>
         </div>
       </div>
+      <AppSelect v-model="selectedMuscleGroup" label="Gruppo muscolare" :options="muscleGroupOptions" />
       <div class="suggestions__list">
         <AppCard v-for="exercise in suggestions" :key="exercise.id" compact>
           <button class="suggestion" type="button" @click="startSuggestion(exercise)">
@@ -134,6 +157,10 @@ onMounted(() => {
           </button>
         </AppCard>
       </div>
+      <p v-if="!filteredSuggestions.length" class="suggestions__empty">Nessun esercizio disponibile per questo gruppo muscolare.</p>
+      <AppButton v-if="hiddenSuggestionCount > 0" variant="ghost" block @click="visibleSuggestionCount += 6">
+        Mostra altri {{ Math.min(6, hiddenSuggestionCount) }} esercizi
+      </AppButton>
     </section>
 
     <p v-if="loading" class="muted" role="status">Caricamento allenamento…</p>
@@ -162,6 +189,7 @@ onMounted(() => {
 .suggestions__heading p{margin:var(--space-1) 0 0;color:var(--color-text-muted);font-size:var(--text-sm)}
 .suggestions__icon{display:grid;flex:0 0 42px;width:42px;height:42px;place-items:center;border-radius:50%;background:var(--color-primary-soft);color:var(--color-accent-text)}
 .suggestions__list{display:grid;gap:var(--space-2)}
+.suggestions__empty{margin:0;padding:var(--space-3);color:var(--color-text-muted);font-size:var(--text-sm);text-align:center}
 .suggestion{display:grid;width:100%;min-height:52px;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:var(--space-3);padding:0;border:0;background:transparent;color:var(--color-text);text-align:left;cursor:pointer}
 .suggestion__copy{display:grid;gap:var(--space-1);min-width:0}
 .suggestion__copy strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

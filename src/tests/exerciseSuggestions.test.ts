@@ -37,4 +37,24 @@ describe('suggerimenti esercizi', () => {
 
     expect(result.map((item) => item.id)).toEqual(['used', 'never-a'])
   })
+
+  it('mostra fino a sei suggerimenti per impostazione predefinita', () => {
+    const result = selectExerciseSuggestions(Array.from({ length: 8 }, (_, index) => exercise(
+      `exercise-${index}`,
+      `Esercizio ${index}`,
+      `2026-08-${String(index + 1).padStart(2, '0')}`
+    )))
+
+    expect(result).toHaveLength(6)
+  })
+
+  it('filtra i suggerimenti per gruppo muscolare', () => {
+    const chest = { ...exercise('chest', 'Panca'), primaryMuscleGroup: 'petto' as const }
+    const back = { ...exercise('back', 'Rematore'), primaryMuscleGroup: 'dorso' as const }
+    const unassigned = exercise('unassigned', 'Stacco')
+
+    const result = selectExerciseSuggestions([chest, back, unassigned], [], 6, 'dorso')
+
+    expect(result.map((item) => item.id)).toEqual(['back'])
+  })
 })
